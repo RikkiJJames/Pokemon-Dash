@@ -5,7 +5,7 @@ Created on Fri Aug 19 15:19:38 2022
 @author: Rjjam
 """
 import pandas as pd
-
+import plotly.graph_objects as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -17,7 +17,7 @@ data = pd.read_csv(url, index_col = 0)
 
 searchable_columns = data.columns[3:].tolist()
 searchable_columns.sort()
-
+print(searchable_columns)
 #stylesheets
 external_stylesheets = [
     {
@@ -55,7 +55,7 @@ app.layout = html.Div(
                                 {"label": stats, "value": stats}
                                 for stats in searchable_columns
                             ],
-                            value = "Attack",
+                            value = ["Attack"],
                             searchable = True,
                             clearable = False,
                             multi = True,
@@ -73,9 +73,11 @@ app.layout = html.Div(
                                 {"label": name, "value": name}
                                 for name in data["Name"]
                             ],
-                            value = data["Name"],
+                            #value = data["Name"],
+                            value = ["Charmander"],
                             searchable = True,
                             clearable = True,
+                            multi = True,
                             placeholder="Select a pokemon",
                             className="dropdown",
                         )
@@ -84,7 +86,7 @@ app.layout = html.Div(
             ),
             html.Div(
                 dcc.Graph(
-                    id="poke-chart", config={"displayModeBar": False},
+                    id="poke-chart", config={"displayModeBar": True},
                 ),
                 className = "card",
             ) 
@@ -102,32 +104,46 @@ app.layout = html.Div(
     ],
 )
 def update_charts(statistics, name):
+
+    if name == None:
+        name = data["Name"]
+    else:
+        pass
     
-    num_of_statistics = len(statistics)
-    print(statistics[0])
-    print(name)
-    for x in statistics:
-        poke_chart_figure = {
-            "data": [
-                {
-                    "x": name,
-                    "y": data.loc[data["Name"] == name, "Attack"],
-                    "type": "lines",
-                },
-            ],
-            "layout": {
-                "title": {
-                       "text":"Pokemon Statistics",
-                       "x":0.05,
-                       "xanchor": "left",
-                },
-                "xaxis": {"fixedrange": True},
-                "yaxis": {"fixedrange": True},
-                "colorway": ["#17B897"],
-            },
-        }
     
-    return poke_chart_figure
+    attributes = statistics
+    
+    fig = go.Figure()
+
+    for pokemon in name:
+        print(pokemon)
+        print(type(data[statistics] [data["Name"] == pokemon].values.tolist()))
+        print(data[statistics] [data["Name"] == pokemon].values.tolist()[0])
+        fig.add_trace(
+            go.Scatterpolar(
+                r = data[statistics] [data["Name"] == pokemon].values.tolist()[0],
+                theta = attributes,
+                name = pokemon,
+                fill = "toself",
+            )
+        )
+
+        
+    fig.update_layout(
+        title_text = "Pokemon Attributes",
+        polar=dict(
+            radialaxis=dict(
+            visible=True,
+            range = [0,150]
+            )),
+        showlegend=True
+        )
+    
+    #print(type(data[statistics] [data["Name"] == name]))
+    #print(statistics)
+    #print(name)
+    
+    return fig
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, use_reloader = True)
