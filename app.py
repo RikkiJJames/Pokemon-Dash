@@ -7,9 +7,10 @@ Created on Fri Aug 19 15:19:38 2022
 import pandas as pd
 import plotly.graph_objects as go
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Output, Input
+from dash import dcc
+from dash import html
+from model import Model
+
 
 #pokemon information
 url = "https://gist.githubusercontent.com/armgilles/194bcff35001e7eb53a2a8b441e8b2c6/raw/92200bc0a673d5ce2110aaad4544ed6c4010f687/pokemon.csv"
@@ -102,27 +103,36 @@ app.layout = html.Div(
                             value = "Radar",
                         ),
                 ],
-
             ),
-            html.Div(
-                dcc.Graph(
-                    id="poke-chart", config={"displayModeBar": True},
-                ),
-                className = "card",
-            ) 
         ],
         className = "menu",
-    )
-   #className = "wrapper",
-   ]
+    ),
+    html.Div(
+        children = [
+            html.Div(
+                children = dcc.Graph(
+                               id="poke-model", config={"scrollZoom": True}
+                           ),
+                           className = "card",
+            ),
+            html.Div(
+                children = dcc.Graph(
+                               id="poke-chart", config={"displayModeBar": True},
+                           ),
+                           className = "card",
+            ),
+        ],
+        className = "wrapper",    
+        ),
+    ]
 )
 
 @app.callback(
-    Output("poke-chart", 'figure'),
+    [dash.Output("poke-chart", 'figure'), dash.Output("poke-model", "figure")],
     [
-     Input("stat-filter", "value"),
-     Input("pokemon-filter", "value"),
-     Input("graph-filter", "value")
+     dash.Input("stat-filter", "value"),
+     dash.Input("pokemon-filter", "value"),
+     dash.Input("graph-filter", "value")
     ],
 )
 def update_charts(statistics, name, graph_type):
@@ -132,10 +142,7 @@ def update_charts(statistics, name, graph_type):
     
     if name == []:
         name = data["Name"]
-    else:
-        pass
     
-    count = 0
     #print("name after is ")
     #print(name)
     attributes = statistics
@@ -186,7 +193,9 @@ def update_charts(statistics, name, graph_type):
     #print(statistics)
     #print(name)
     
-    return fig
+    return fig, Model(name[0])
+
+
 
 if __name__ == "__main__":
     app.run_server(debug=True, use_reloader = True)

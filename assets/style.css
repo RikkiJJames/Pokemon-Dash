@@ -44,7 +44,7 @@ body {
 .wrapper {
     margin-right: auto;
     margin-left: auto;
-    max-width: 1024px;
+    #max-width: 1024px;
     padding-right: 10px;
     padding-left: 10px;
     margin-top: 32px;
@@ -53,12 +53,31 @@ body {
 .card {
     margin-bottom: 24px;
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
+    width: 48%;
+    float: left;
+    box-sizing: border-box;
+}
+
+.offset-by-card{
+    margin-left: 52%;
 }
 
 .menu {
+    height: 112px;
     justify-content: space-evenly;
     padding-top: 24px;
     padding-bottom: 24px
+    margin: -80px auto 0 auto;
+    background-color: #FFFFFF;
+    box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
+}
+
+.menu {
+    
+    #width: 912px;
+    display: flex;
+    justify-content: space-evenly;
+    padding-top: 24px;
     margin: -80px auto 0 auto;
     background-color: #FFFFFF;
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
