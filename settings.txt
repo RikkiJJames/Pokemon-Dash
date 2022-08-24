@@ -1,0 +1,4 @@
+root: C:\Users\Rjjam\OneDrive\Documents\GitHub\Pokemon 
+path: C:\Program Files\nodejs 
+arch: 64 
+proxy: none

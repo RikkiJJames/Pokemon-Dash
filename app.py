@@ -7,19 +7,38 @@ Created on Fri Aug 19 15:19:38 2022
 import pandas as pd
 import plotly.graph_objects as go
 import dash
-from dash import dcc
-from dash import html
-from model import Model
+from dash import dcc, html, ctx
+from test2 import main3
+import re
+from dash.exceptions import PreventUpdate
 
-
-#pokemon information
+"""
+#Pokemon Information Github location
 url = "https://gist.githubusercontent.com/armgilles/194bcff35001e7eb53a2a8b441e8b2c6/raw/92200bc0a673d5ce2110aaad4544ed6c4010f687/pokemon.csv"
 data = pd.read_csv(url, index_col = 0)
-data.loc[data['Name'].str.contains('Mega'), 'sport'] = 'ball sport'
-print(data.columns)
+
+
+#clean pokemon names and remove mega
+def clean_names(pokemon_name):
+    
+    if re.search('.*Mega.*', pokemon_name):
+        index = re.search('Mega.*', pokemon_name).start()
+        
+        return pokemon_name[index:]
+    else:
+        return pokemon_name
+    
+
+
+    
 #Removing other characters from Mega Pokemon
-#data['OtherName'] = data['Name'].str.extract(r'(^.*Mega.*$)', expand=False)
-#print("printing" + data["OtherName"])
+data["Name"] = data["Name"].apply(clean_names)
+
+#Save cleaned data to csv
+data.to_csv('data/pokedex.csv', index = False, encoding='utf-8')
+"""
+
+data = pd.read_csv("data/pokedex.csv")
 
 #Selecting Columns to be searched in radar graph
 searchable_columns = ["Attack","Defense","HP","Speed", "Sp. Atk","Sp. Def"]
@@ -73,26 +92,36 @@ app.layout = html.Div(
                             className="dropdown",
                         ),
                     ],
-                ), 
+                ),
+            html.Div(
+                children =[
+                    html.Div(children="Selection Type", className="menu-title"),
+                        dcc.RadioItems(
+                            id="selection-filter",
+                            options=["Single", "Multiple"],
+                            value = "Single",
+                        ),
+                ],
+            ),
             html.Div(
                 children =[
                     html.Div(children="Pokemon", className="menu-title"),
-                        dcc.Dropdown(
-                            id="pokemon-filter",
-                            options=[
+                        html.Div( id = "pokemon-update-list",
+                            children = dcc.Dropdown(
+                                id = "pokemon-filter",
+                                options=[
                                 {"label": name, "value": name}
                                 for name in data["Name"]
-                            ],
-                            #value = data["Name"],
-                            value = ["Bulbasaur"],
-                            searchable = True,
-                            clearable = True,
-                            multi = True,
-                            placeholder="Select a pokemon",
-                            className="dropdown",
-                        ),    
+                                ],
+                                value = ["Bulbasaur"],
+                                searchable = True,
+                                clearable = False,
+                                multi = False,
+                                className="dropdown"
+                            ),
+                        ),
                 ],
-
+                style = {"width": "20%"},
             ),
             html.Div(
                 children =[
@@ -128,33 +157,94 @@ app.layout = html.Div(
 )
 
 @app.callback(
+    dash.Output("pokemon-update-list", "children"),
+    [
+     dash.Input("selection-filter", "value"),
+     dash.Input("pokemon-filter", "value")
+    ],
+)
+
+def update_pokemon_list(selection, pokemon):
+    
+    if ctx.triggered_id == "pokemon-filter":
+        raise PreventUpdate
+    
+    pokemon_option = None
+    
+    if type(pokemon) == str:
+        pokemon = [pokemon]
+        
+    if selection == "Single":
+            
+        pokemon_option = False
+        print(pokemon)
+        child = dcc.Dropdown(
+            id = "pokemon-filter",
+            options=[
+            {"label": name, "value": name}
+            for name in data["Name"]
+            ],
+            value = pokemon[0],
+            searchable = True,
+            clearable = False,
+            multi = pokemon_option,
+            className="dropdown")
+        
+            
+    elif selection == "Multiple":
+         pokemon_option = True
+         
+         child = dcc.Dropdown(
+             id = "pokemon-filter",
+             options=[
+             {"label": name, "value": name}
+             for name in data["Name"]
+             ],
+             value = pokemon[0],
+             searchable = True,
+             clearable = False,
+             multi = pokemon_option,
+             className="dropdown")
+         
+    
+    return child
+
+@app.callback(
     [dash.Output("poke-chart", 'figure'), dash.Output("poke-model", "figure")],
     [
      dash.Input("stat-filter", "value"),
+     dash.Input("selection-filter", "value"),
      dash.Input("pokemon-filter", "value"),
      dash.Input("graph-filter", "value")
     ],
 )
-def update_charts(statistics, name, graph_type):
+
+def update_charts(statistics, selection, name, graph_type):
     
-    #print("name before is")
-    #print(name)
-    
-    if name == []:
-        name = data["Name"]
-    
-    #print("name after is ")
-    #print(name)
+
     attributes = statistics
     
     fig = go.Figure()
     
-    if graph_type == "Radar":
-        for pokemon in name:
-            #print(pokemon)
-            #print(type(data[statistics] [data["Name"] == pokemon].values.tolist()))
-            #print(data[statistics] [data["Name"] == pokemon].values.tolist()[0])
+    multi_select = None
+    
+    if selection == "Single":
             
+        multi_select = False
+            
+    elif selection == "Multiple":
+         multi_select = True
+         
+    if name == [] or not name:
+        name = data["Name"][0]
+    
+    if type(name) == str:
+        name = [name]
+    
+
+         
+    if graph_type == "Radar" and multi_select == True:
+        for pokemon in name:
             fig.add_trace(
                 go.Scatterpolar(
                     r = data[statistics] [data["Name"] == pokemon].values.tolist()[0],
@@ -172,17 +262,63 @@ def update_charts(statistics, name, graph_type):
                 )),
             showlegend=True
             )
-    else:
+        
+    elif graph_type == "Radar" and multi_select == False:
         for pokemon in name:
+            fig.add_trace(
+                go.Scatterpolar(
+                    r = data[statistics] [data["Name"] == pokemon].values.tolist()[0],
+                    theta = attributes,
+                    name = f"#{data.index[data['Name'] == pokemon].to_list()[0]}: {pokemon}",
+                    fill = "toself",
+                )
+            )
+        fig.update_layout(
+            title_text = "Pokemon Attributes",
+            polar=dict(
+                radialaxis=dict(
+                visible=True,
+                range = [0, data[statistics][data["Name"] == pokemon].max()]
+                )),
+            showlegend=True
+            )
+    elif graph_type == "Line" and multi_select == True:
+        for pokemon in name:
+            print(data[statistics] [data["Name"] == pokemon].values.tolist()[0])
             y_values = data[statistics][data["Name"] == pokemon].values.tolist()[0]
-            print(y_values)
             fig.add_trace(go.Scatter(x= [statistics] * len(y_values), y = y_values,
                     mode='lines+markers',
                     name = f"#{data[data['Name'] == pokemon].index[0]}: {pokemon}"
                     )
             )
-            
+        fig.update_layout(
+            title_text = "Pokemon Attributes",
+            polar=dict(
+                radialaxis=dict(
+                visible=True,
+                range = [0, data[statistics][data["Name"] == pokemon].max()]
+                )),
+            showlegend=True
+            )
+    elif graph_type == "Line" and multi_select == False:
+        for pokemon in name:
+            y_values = data[statistics][data["Name"] == pokemon].values.tolist()[0]
+            fig.add_trace(go.Scatter(x= [statistics] * len(y_values), y = y_values,
+                    mode='lines+markers',
+                    name = f"#{data.index[data['Name'] == pokemon].to_list()[0]}: {pokemon}"
+                    )
+            )
+        fig.update_layout(
+            title_text = "Pokemon Attributes",
+            polar=dict(
+                radialaxis=dict(
+                visible=True,
+                range = [0, data[statistics][data["Name"] == pokemon].max()]
+                )),
+            showlegend=True
+            )
        
+   
             
         fig.update_layout(showlegend = True)
   
@@ -193,8 +329,11 @@ def update_charts(statistics, name, graph_type):
     #print(statistics)
     #print(name)
     
-    return fig, Model(name[0])
-
+    #return fig, Model(name[0])
+    
+    
+         
+    return fig, main3(name[0])
 
 
 if __name__ == "__main__":
