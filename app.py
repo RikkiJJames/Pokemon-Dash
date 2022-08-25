@@ -416,11 +416,7 @@ def update_charts(statistics, selection, name, graph_type):
         showlegend=True,
         height = 400
         )
-
-  
-    
-    
-         
+   
     return fig, model(name[0])
 
 

@@ -118,4 +118,4 @@ def model(model_name):
 #GLFW Error: WGL: Failed to make context current: The requested transformation operation is not supported.
 
 if __name__ == "__main__":
-    main3()
+    model()
