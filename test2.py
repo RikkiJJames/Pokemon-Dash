@@ -68,7 +68,7 @@ def main5():
     )
     return fig
 
-def main3(model_name):
+def model(model_name):
     
     cap_model_name = model_name.capitalize()
     mesh = o3d.io.read_triangle_mesh(f"assets/Pokemon XY/{cap_model_name}/{model_name}.obj")
@@ -106,7 +106,9 @@ def main3(model_name):
                 yaxis=dict(visible=False),
                 zaxis=dict(visible=False),
                 camera = {"up":{"x":0, "y":1, "z":0}, "eye": {"x": 1.25, "y": 1.25, "z": 1.25}},
-            )
+                
+            ),
+            height = 400,
         )
     )
     return fig  #Display the figure 

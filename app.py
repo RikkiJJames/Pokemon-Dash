@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import dash
 from dash import dcc, html, ctx, dash_table
-from test2 import main3
+from test2 import model
 import re
 from dash.exceptions import PreventUpdate
 
@@ -81,9 +81,6 @@ external_stylesheets = [
         "rel": "stylesheet",
     },
 ]
-
-PAGE_NUMBER = 0
-PAGE_SIZE = 5
 
 app = dash.Dash(__name__)
 app.title = "Poké App"
@@ -206,13 +203,11 @@ app.layout = html.Div(
                 children = [
                     dash_table.DataTable(
                     movesets.to_dict('records'),
-                    page_current = PAGE_NUMBER,
-                    page_size = PAGE_SIZE,
+                    page_current = 0,
+                    page_size = 5,
                     page_action='custom',
                     filter_query = "",
-                    columns = [
-                        {"name": i, "id": i} for i in movesets.iloc[:, 1 + PAGE_NUMBER: ]
-                    ], id = "move-table",
+                    id = "move-table",
                     style_cell_conditional= [
                         {
                         'textAlign': 'center'
@@ -229,14 +224,20 @@ app.layout = html.Div(
                className = "card",
             ),   
         ],
-        className = "wrapper",    
+        className = "wrapper",  
         ),
+        
     ],
 )
 
 
 @app.callback(
-    [dash.Output('info-table', "data"), dash.Output('move-table', "data")],
+    [
+     dash.Output('info-table', "data"),
+     dash.Output('move-table', "data"),
+     dash.Output('move-table', "columns")
+     
+    ],
     [
      dash.Input('info-table', "filter_query"),
      dash.Input('move-table', "filter_query"),
@@ -265,9 +266,14 @@ def update_table(info_filter, move_filter, pokemon, page_current, page_size):
     move_table = move_table.iloc[:, 
         page_current * page_size: (page_current + 1) * page_size
         ]
-    #PAGE_CURRENT = page_current
-    PAGE_NUMBER = page_current
-    return info_table.to_dict('records'), move_table.to_dict('records')
+    
+    columns = [
+        {"name": i, "id": i} for i in movesets.columns[
+            1 + page_current * page_size: (page_current + 1) * page_size
+        ]
+    ]
+    
+    return info_table.to_dict('records'), move_table.to_dict('records'), columns
 
 
 
@@ -383,7 +389,9 @@ def update_charts(statistics, selection, name, graph_type):
     elif graph_type == "Line" and multi_select == True:
         for pokemon in name:
             y_values = pokedex[statistics][pokedex["Name"] == pokemon].values.tolist()[0]
-            fig.add_trace(go.Scatter(x= [statistics] * len(y_values), y = y_values,
+            print(statistics * len(y_values))
+            print(y_values)
+            fig.add_trace(go.Scatter(x= statistics * len(y_values), y = y_values,
                     mode='lines+markers',
                     name = f"#{pokedex[pokedex['Name'] == pokemon].index[0]}: {pokemon}"
                     )
@@ -392,7 +400,7 @@ def update_charts(statistics, selection, name, graph_type):
     elif graph_type == "Line" and multi_select == False:
         for pokemon in name:
             y_values = pokedex[statistics][pokedex["Name"] == pokemon].values.tolist()[0]
-            fig.add_trace(go.Scatter(x = [statistics] * len(y_values), y = y_values,
+            fig.add_trace(go.Scatter(x = statistics * len(y_values), y = y_values,
                     mode='lines+markers',
                     name = f"#{pokedex.index[pokedex['Name'] == pokemon].to_list()[0]}: {pokemon}"
                     )
@@ -405,18 +413,16 @@ def update_charts(statistics, selection, name, graph_type):
             visible=True,
             range = [0, pokedex[statistics][pokedex["Name"] == pokemon].max()]
             )),
-        showlegend=True
+        showlegend=True,
+        height = 400
         )
-   
-   
-            
-    fig.update_layout(showlegend = True)
+
   
     
     
          
-    return fig, main3(name[0])
+    return fig, model(name[0])
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, use_reloader = True)
+    app.run_server(debug = False, use_reloader = True)
