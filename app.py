@@ -7,7 +7,7 @@ Created on Fri Aug 19 15:19:38 2022
 import pandas as pd
 import plotly.graph_objects as go
 import dash
-from dash import dcc, html, ctx
+from dash import dcc, html, ctx, dash_table
 from test2 import main3
 import re
 from dash.exceptions import PreventUpdate
@@ -15,7 +15,7 @@ from dash.exceptions import PreventUpdate
 """
 #Pokemon Information Github location
 url = "https://gist.githubusercontent.com/armgilles/194bcff35001e7eb53a2a8b441e8b2c6/raw/92200bc0a673d5ce2110aaad4544ed6c4010f687/pokemon.csv"
-data = pd.read_csv(url, index_col = 0)
+pokedex = pd.read_csv(url, index_col = 0)
 
 
 #clean pokemon names and remove mega
@@ -28,24 +28,51 @@ def clean_names(pokemon_name):
     else:
         return pokemon_name
     
-
-
     
 #Removing other characters from Mega Pokemon
-data["Name"] = data["Name"].apply(clean_names)
+pokedex["Name"] = pokedex["Name"].apply(clean_names)
 
-#Save cleaned data to csv
-data.to_csv('data/pokedex.csv', index = False, encoding='utf-8')
+#Replace lengendary True and False with "Yes" & "No"
+pokedex["Legendary"] = pokedex["Legendary"].apply(lambda x: "Yes" if x == True else "No")
+
+#Save cleaned pokedex to csv
+
+pokedex.to_csv('data/pokedex.csv', index = True, encoding='utf-8')
+
 """
 
-data = pd.read_csv("data/pokedex.csv")
+pokedex = pd.read_csv("data/pokedex.csv", index_col = 0)
+"""
+movesets = pd.read_csv("data/movesets.csv")
 
+#print(movesets.head)
+
+def clean_moves(movesets):
+    
+    for column in movesets.columns:
+        movesets[column] = movesets[column].astype(str).str.replace("TM", "", regex = True)
+
+clean_moves(movesets)
+#movesets = movesets.loc[:,~movesets.columns.str.startswith("nan")]
+movesets.to_csv('data/movesets_modified.csv', index = True, encoding='utf-8')
+print(movesets)
+#print(movesets.head())
+"""
+
+movesets = pd.read_csv("data/movesets.csv")
 #Selecting Columns to be searched in radar graph
 searchable_columns = ["Attack","Defense","HP","Speed", "Sp. Atk","Sp. Def"]
 searchable_columns.sort()
 
+info_columns = ["Name", "Type 1", "Type 2", "Generation", "Legendary"]
 
+info_data = pokedex[info_columns].groupby("Name")
 
+table_row =  pokedex[info_columns] [pokedex["Name"] == "Bulbasaur"]
+
+info_columns2 = ["Type 1", "Type 2", "Generation", "Legendary"]
+
+#print(info_data)
 #stylesheets
 external_stylesheets = [
     {
@@ -55,7 +82,8 @@ external_stylesheets = [
     },
 ]
 
-#print(data.head())
+PAGE_NUMBER = 0
+PAGE_SIZE = 5
 
 app = dash.Dash(__name__)
 app.title = "Poké App"
@@ -111,7 +139,7 @@ app.layout = html.Div(
                                 id = "pokemon-filter",
                                 options=[
                                 {"label": name, "value": name}
-                                for name in data["Name"]
+                                for name in pokedex["Name"]
                                 ],
                                 value = ["Bulbasaur"],
                                 searchable = True,
@@ -150,11 +178,98 @@ app.layout = html.Div(
                            ),
                            className = "card",
             ),
+            
+            html.Div(
+                children = [
+                    dash_table.DataTable(
+                    pokedex.to_dict('records'),
+                    columns = [
+                        {"name": i, "id": i} for i in pokedex[info_columns]
+                    ], id = "info-table",
+                    filter_query = "",
+                    style_cell_conditional=[
+                        {
+                        'textAlign': 'center'
+                        }
+                    ],
+                    style_data_conditional=[
+                        {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgb(220, 220, 220)',
+                        }
+                    ],
+                    )   
+               ],
+               className = "card",
+            ),
+            html.Div(
+                children = [
+                    dash_table.DataTable(
+                    movesets.to_dict('records'),
+                    page_current = PAGE_NUMBER,
+                    page_size = PAGE_SIZE,
+                    page_action='custom',
+                    filter_query = "",
+                    columns = [
+                        {"name": i, "id": i} for i in movesets.iloc[:, 1 + PAGE_NUMBER: ]
+                    ], id = "move-table",
+                    style_cell_conditional= [
+                        {
+                        'textAlign': 'center'
+                        }
+                    ],
+                    style_data_conditional=[
+                        {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgb(220, 220, 220)',
+                        }
+                    ],
+                    )   
+               ],
+               className = "card",
+            ),   
         ],
         className = "wrapper",    
         ),
+    ],
+)
+
+
+@app.callback(
+    [dash.Output('info-table', "data"), dash.Output('move-table', "data")],
+    [
+     dash.Input('info-table', "filter_query"),
+     dash.Input('move-table', "filter_query"),
+     dash.Input("pokemon-filter", "value"),
+     dash.Input('move-table', "page_current"),
+     dash.Input('move-table', "page_size"),
     ]
 )
+
+def update_table(info_filter, move_filter, pokemon, page_current, page_size):
+    
+    if type(pokemon) == str:
+        pokemon = [pokemon]
+    
+    info_table = pd.DataFrame()
+    move_table = pd.DataFrame()
+
+    if len(pokemon) > 1:
+        for x in range(len(pokemon)):
+            info_table = info_table.append([(pokedex[pokedex["Name"].str.match(pokemon[x])])])
+            move_table = move_table.append([(movesets[movesets["Name"].str.match(pokemon[x])])])
+    else:
+        info_table = pokedex[pokedex["Name"].str.match(pokemon[0])]
+        move_table = movesets[movesets["Name"].str.match(pokemon[0])]
+    
+    move_table = move_table.iloc[:, 
+        page_current * page_size: (page_current + 1) * page_size
+        ]
+    #PAGE_CURRENT = page_current
+    PAGE_NUMBER = page_current
+    return info_table.to_dict('records'), move_table.to_dict('records')
+
+
 
 @app.callback(
     dash.Output("pokemon-update-list", "children"),
@@ -177,12 +292,12 @@ def update_pokemon_list(selection, pokemon):
     if selection == "Single":
             
         pokemon_option = False
-        print(pokemon)
+
         child = dcc.Dropdown(
             id = "pokemon-filter",
             options=[
             {"label": name, "value": name}
-            for name in data["Name"]
+            for name in pokedex["Name"]
             ],
             value = pokemon[0],
             searchable = True,
@@ -198,7 +313,7 @@ def update_pokemon_list(selection, pokemon):
              id = "pokemon-filter",
              options=[
              {"label": name, "value": name}
-             for name in data["Name"]
+             for name in pokedex["Name"]
              ],
              value = pokemon[0],
              searchable = True,
@@ -221,7 +336,7 @@ def update_pokemon_list(selection, pokemon):
 
 def update_charts(statistics, selection, name, graph_type):
     
-
+    
     attributes = statistics
     
     fig = go.Figure()
@@ -236,7 +351,7 @@ def update_charts(statistics, selection, name, graph_type):
          multi_select = True
          
     if name == [] or not name:
-        name = data["Name"][0]
+        name = pokedex["Name"][0]
     
     if type(name) == str:
         name = [name]
@@ -247,89 +362,56 @@ def update_charts(statistics, selection, name, graph_type):
         for pokemon in name:
             fig.add_trace(
                 go.Scatterpolar(
-                    r = data[statistics] [data["Name"] == pokemon].values.tolist()[0],
+                    r = pokedex[statistics] [pokedex["Name"] == pokemon].values.tolist()[0],
                     theta = attributes,
-                    name = f"#{data[data['Name'] == pokemon].index[0]}: {pokemon}",
+                    name = f"#{pokedex[pokedex['Name'] == pokemon].index[0]}: {pokemon}",
                     fill = "toself",
                 )
-            )
-        fig.update_layout(
-            title_text = "Pokemon Attributes",
-            polar=dict(
-                radialaxis=dict(
-                visible=True,
-                range = [0, data[statistics][data["Name"] == pokemon].max()]
-                )),
-            showlegend=True
             )
         
     elif graph_type == "Radar" and multi_select == False:
         for pokemon in name:
             fig.add_trace(
                 go.Scatterpolar(
-                    r = data[statistics] [data["Name"] == pokemon].values.tolist()[0],
+                    r = pokedex[statistics] [pokedex["Name"] == pokemon].values.tolist()[0],
                     theta = attributes,
-                    name = f"#{data.index[data['Name'] == pokemon].to_list()[0]}: {pokemon}",
+                    name = f"#{pokedex.index[pokedex['Name'] == pokemon].to_list()[0]}: {pokemon}",
                     fill = "toself",
                 )
             )
-        fig.update_layout(
-            title_text = "Pokemon Attributes",
-            polar=dict(
-                radialaxis=dict(
-                visible=True,
-                range = [0, data[statistics][data["Name"] == pokemon].max()]
-                )),
-            showlegend=True
-            )
+
     elif graph_type == "Line" and multi_select == True:
         for pokemon in name:
-            print(data[statistics] [data["Name"] == pokemon].values.tolist()[0])
-            y_values = data[statistics][data["Name"] == pokemon].values.tolist()[0]
+            y_values = pokedex[statistics][pokedex["Name"] == pokemon].values.tolist()[0]
             fig.add_trace(go.Scatter(x= [statistics] * len(y_values), y = y_values,
                     mode='lines+markers',
-                    name = f"#{data[data['Name'] == pokemon].index[0]}: {pokemon}"
+                    name = f"#{pokedex[pokedex['Name'] == pokemon].index[0]}: {pokemon}"
                     )
             )
-        fig.update_layout(
-            title_text = "Pokemon Attributes",
-            polar=dict(
-                radialaxis=dict(
-                visible=True,
-                range = [0, data[statistics][data["Name"] == pokemon].max()]
-                )),
-            showlegend=True
-            )
+
     elif graph_type == "Line" and multi_select == False:
         for pokemon in name:
-            y_values = data[statistics][data["Name"] == pokemon].values.tolist()[0]
-            fig.add_trace(go.Scatter(x= [statistics] * len(y_values), y = y_values,
+            y_values = pokedex[statistics][pokedex["Name"] == pokemon].values.tolist()[0]
+            fig.add_trace(go.Scatter(x = [statistics] * len(y_values), y = y_values,
                     mode='lines+markers',
-                    name = f"#{data.index[data['Name'] == pokemon].to_list()[0]}: {pokemon}"
+                    name = f"#{pokedex.index[pokedex['Name'] == pokemon].to_list()[0]}: {pokemon}"
                     )
             )
-        fig.update_layout(
-            title_text = "Pokemon Attributes",
-            polar=dict(
-                radialaxis=dict(
-                visible=True,
-                range = [0, data[statistics][data["Name"] == pokemon].max()]
-                )),
-            showlegend=True
-            )
-       
+            
+    fig.update_layout(
+        title_text = "Pokemon Attributes",
+        polar=dict(
+            radialaxis=dict(
+            visible=True,
+            range = [0, pokedex[statistics][pokedex["Name"] == pokemon].max()]
+            )),
+        showlegend=True
+        )
+   
    
             
-        fig.update_layout(showlegend = True)
+    fig.update_layout(showlegend = True)
   
-        
-    
-    
-    #print(type(data[statistics] [data["Name"] == name]))
-    #print(statistics)
-    #print(name)
-    
-    #return fig, Model(name[0])
     
     
          

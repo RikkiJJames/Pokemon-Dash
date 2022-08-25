@@ -1,7 +1,7 @@
 body {
     font-family: "Lato", sans-serif;
     margin: 0;
-    background-color: #F7F7F7;
+    background-color: #222222;
 }
 
 .header {
@@ -44,7 +44,7 @@ body {
 .wrapper {
     margin-right: auto;
     margin-left: auto;
-    #max-width: 1024px;
+    max-width: 100%;
     padding-right: 10px;
     padding-left: 10px;
     margin-top: 32px;
@@ -53,32 +53,26 @@ body {
 .card {
     margin-bottom: 24px;
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
-    width: 48%;
+    width: 49%;
     float: left;
+    margin-right: 1%;
     box-sizing: border-box;
 }
 
 .offset-by-card{
-    margin-left: 52%;
+    margin-left: 50%;
 }
 
-.menu {
-    height: 112px;
-    justify-content: space-evenly;
-    padding-top: 24px;
-    padding-bottom: 24px
-    margin: -80px auto 0 auto;
-    background-color: #FFFFFF;
-    box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
-}
 
 .menu {
-    
-    #width: 912px;
+    height: 70px;
+    left: 50%;
+    width: 100%;
     display: flex;
     justify-content: space-evenly;
-    padding-top: 24px;
-    margin: -80px auto 0 auto;
+    padding-top: 10px;
+    padding-bottom: 24px
+    margin: auto;
     background-color: #FFFFFF;
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
 }
