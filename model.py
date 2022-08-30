@@ -68,7 +68,7 @@ def main5():
     )
     return fig
 
-def model(model_name):
+def generate_model(model_name):
     
     cap_model_name = model_name.capitalize()
     mesh = o3d.io.read_triangle_mesh(f"assets/Pokemon XY/{cap_model_name}/{model_name}.obj")
@@ -118,4 +118,4 @@ def model(model_name):
 #GLFW Error: WGL: Failed to make context current: The requested transformation operation is not supported.
 
 if __name__ == "__main__":
-    model()
+    generate_model()

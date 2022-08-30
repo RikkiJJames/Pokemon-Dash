@@ -8,72 +8,18 @@ import pandas as pd
 import plotly.graph_objects as go
 import dash
 from dash import dcc, html, ctx, dash_table
-from test2 import model
-import re
+from model import generate_model
+from clean_csv import clean_data
 from dash.exceptions import PreventUpdate
 
-"""
-#Pokemon Information Github location
-url = "https://gist.githubusercontent.com/armgilles/194bcff35001e7eb53a2a8b441e8b2c6/raw/92200bc0a673d5ce2110aaad4544ed6c4010f687/pokemon.csv"
-pokedex = pd.read_csv(url, index_col = 0)
+#Cleans original csv data to be usable
+#clean_data()
 
-
-#clean pokemon names and remove mega
-def clean_names(pokemon_name):
-    
-    if re.search('.*Mega.*', pokemon_name):
-        index = re.search('Mega.*', pokemon_name).start()
-        
-        return pokemon_name[index:]
-    else:
-        return pokemon_name
-    
-    
-#Removing other characters from Mega Pokemon
-pokedex["Name"] = pokedex["Name"].apply(clean_names)
-
-#Replace lengendary True and False with "Yes" & "No"
-pokedex["Legendary"] = pokedex["Legendary"].apply(lambda x: "Yes" if x == True else "No")
-
-#Save cleaned pokedex to csv
-
-pokedex.to_csv('data/pokedex.csv', index = True, encoding='utf-8')
-
-"""
-
+#Load cleaned csv data
 pokedex = pd.read_csv("data/pokedex.csv", index_col = 0)
-"""
 movesets = pd.read_csv("data/movesets.csv")
 
-#print(movesets.head)
-
-def clean_moves(movesets):
-    
-    for column in movesets.columns:
-        movesets[column] = movesets[column].astype(str).str.replace("TM", "", regex = True)
-
-clean_moves(movesets)
-#movesets = movesets.loc[:,~movesets.columns.str.startswith("nan")]
-movesets.to_csv('data/movesets_modified.csv', index = True, encoding='utf-8')
-print(movesets)
-#print(movesets.head())
-"""
-
-movesets = pd.read_csv("data/movesets.csv")
-#Selecting Columns to be searched in radar graph
-searchable_columns = ["Attack","Defense","HP","Speed", "Sp. Atk","Sp. Def"]
-searchable_columns.sort()
-
-info_columns = ["Name", "Type 1", "Type 2", "Generation", "Legendary"]
-
-info_data = pokedex[info_columns].groupby("Name")
-
-table_row =  pokedex[info_columns] [pokedex["Name"] == "Bulbasaur"]
-
-info_columns2 = ["Type 1", "Type 2", "Generation", "Legendary"]
-
-#print(info_data)
-#stylesheets
+#Load stylesheets
 external_stylesheets = [
     {
         "href": "https://fonts.googleapis.com/css2?"
@@ -81,6 +27,15 @@ external_stylesheets = [
         "rel": "stylesheet",
     },
 ]
+
+#Selecting Columns to be searched in graph's
+searchable_columns = ["Attack","Defense","HP","Speed", "Sp. Atk","Sp. Def"]
+searchable_columns.sort()
+
+#Selecting Columns to be selected in Tables
+info_columns = ["Name", "Type 1", "Type 2", "Generation", "Legendary"]
+
+
 
 app = dash.Dash(__name__)
 app.title = "Poké App"
@@ -179,7 +134,6 @@ app.layout = html.Div(
             html.Div(
                 children = [
                     dash_table.DataTable(
-                    pokedex.to_dict('records'),
                     columns = [
                         {"name": i, "id": i} for i in pokedex[info_columns]
                     ], id = "info-table",
@@ -202,7 +156,6 @@ app.layout = html.Div(
             html.Div(
                 children = [
                     dash_table.DataTable(
-                    movesets.to_dict('records'),
                     page_current = 0,
                     page_size = 5,
                     page_action='custom',
@@ -417,7 +370,7 @@ def update_charts(statistics, selection, name, graph_type):
         height = 400
         )
    
-    return fig, model(name[0])
+    return fig, generate_model(name[0])
 
 
 if __name__ == "__main__":
