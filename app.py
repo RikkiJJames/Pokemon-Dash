@@ -228,8 +228,6 @@ def update_table(info_filter, move_filter, pokemon, page_current, page_size):
     
     return info_table.to_dict('records'), move_table.to_dict('records'), columns
 
-
-
 @app.callback(
     dash.Output("pokemon-update-list", "children"),
     [
@@ -371,7 +369,6 @@ def update_charts(statistics, selection, name, graph_type):
         )
    
     return fig, generate_model(name[0])
-
 
 if __name__ == "__main__":
     app.run_server(debug = False, use_reloader = True)

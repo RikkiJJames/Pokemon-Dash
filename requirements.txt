@@ -1,6 +1,5 @@
-open3d
-trimesh
-mathutils
-wand
-Pillow
-numpy
+dash==2.6.1
+numpy==1.23.2
+open3d==0.15.1
+pandas==1.4.3
+plotly==5.10.0
